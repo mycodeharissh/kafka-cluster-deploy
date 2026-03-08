@@ -1,0 +1,51 @@
+name: Create GKE Cluster
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  terraform:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Setup Google Auth
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Setup gcloud
+      uses: google-github-actions/setup-gcloud@v1
+
+    - name: Install Terraform
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y terraform
+
+    - name: Terraform Init
+      run: |
+        cd terraform
+        terraform init
+
+    - name: Terraform Apply
+      run: |
+        cd terraform
+        terraform apply -auto-approve
+
+    - name: Get Cluster Credentials
+      run: |
+        gcloud container clusters get-credentials kafka-cluster \
+        --zone us-central1-a
+
+    - name: Install Helm
+      run: |
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+    - name: Deploy Helm Chart
+      run: |
+        helm install kafka ./helm/kafka-app
